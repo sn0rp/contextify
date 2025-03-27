@@ -2,8 +2,10 @@ name: CI
 
 on:
   push:
+    branches:
+      - '**'  # Matches all branches (e.g., master, feature/branch)
     tags:
-      - 'v*'
+      - 'v*'  # Matches tags like v1.0.0
   pull_request:
 
 jobs:
