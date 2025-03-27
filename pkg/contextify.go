@@ -132,15 +132,19 @@ func LoadGitignore(gitignorePath string) ([]string, error) {
 
 // IsIgnored checks if a file or directory should be ignored
 func IsIgnored(path string, isDir bool, ignorePatterns []string) bool {
-	normalizedPath := path
+	// Normalize the input path
+	normalizedPath := filepath.Clean(path)
 	if isDir {
 		normalizedPath += string(filepath.Separator)
 	}
+
 	for _, pattern := range ignorePatterns {
-		if matched, _ := filepath.Match(pattern, normalizedPath); matched {
+		// Replace '/' with the platform's separator in the pattern
+		normalizedPattern := strings.ReplaceAll(pattern, "/", string(filepath.Separator))
+		if matched, _ := filepath.Match(normalizedPattern, normalizedPath); matched {
 			return true
 		}
-		if matched, _ := filepath.Match(pattern+"*", normalizedPath); matched {
+		if matched, _ := filepath.Match(normalizedPattern+"*", normalizedPath); matched {
 			return true
 		}
 	}
