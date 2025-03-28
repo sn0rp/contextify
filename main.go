@@ -4,52 +4,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	contextify "contextify/pkg"
 
 	flag "github.com/spf13/pflag"
-	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/text/transform"
 	"gopkg.in/yaml.v3"
 )
-
-// copyToClipboard attempts to copy content to the clipboard using available tools
-func copyToClipboard(content string) error {
-	// Windows (clip.exe) - used in WSL2 or native Windows
-	if _, err := exec.LookPath("clip.exe"); err == nil {
-		// Convert to UTF-16LE with BOM for Windows clipboard compatibility
-		encoder := unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewEncoder()
-		utf16Content, _, err := transform.String(encoder, content)
-		if err != nil {
-			return fmt.Errorf("failed to encode to UTF-16: %v", err)
-		}
-		cmd := exec.Command("clip.exe")
-		cmd.Stdin = strings.NewReader(utf16Content)
-		return cmd.Run()
-	}
-	// X11 (xclip)
-	if _, err := exec.LookPath("xclip"); err == nil {
-		cmd := exec.Command("xclip", "-selection", "clipboard")
-		cmd.Stdin = strings.NewReader(content)
-		return cmd.Run()
-	}
-	// Wayland (wl-copy)
-	if _, err := exec.LookPath("wl-copy"); err == nil {
-		cmd := exec.Command("wl-copy")
-		cmd.Stdin = strings.NewReader(content)
-		return cmd.Run()
-	}
-	// macOS (pbcopy)
-	if _, err := exec.LookPath("pbcopy"); err == nil {
-		cmd := exec.Command("pbcopy")
-		cmd.Stdin = strings.NewReader(content)
-		return cmd.Run()
-	}
-	return fmt.Errorf("no clipboard tool available (tried clip.exe, xclip, wl-copy, pbcopy)")
-}
 
 func main() {
 	// Define command-line flags
@@ -213,7 +175,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("Failed to read output file for clipboard: %v\n", err)
 		} else {
-			err = copyToClipboard(string(content))
+			err = contextify.CopyToClipboard(string(content))
 			if err != nil {
 				fmt.Printf("Clipboard not supported: %v. Output is still available in %s.\n", err, config.Output)
 			} else {

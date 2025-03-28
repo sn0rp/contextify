@@ -7,11 +7,15 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 
 	"github.com/cheggaaa/pb/v3"
 )
@@ -35,6 +39,41 @@ Request:
 The entire codebase is pasted below as context:
 
 `
+
+// CopyToClipboard copies content to the system clipboard using available tools.
+func CopyToClipboard(content string) error {
+	// Windows (clip.exe) - used in WSL2 or native Windows
+	if _, err := exec.LookPath("clip.exe"); err == nil {
+		// Convert to UTF-16LE with BOM for Windows clipboard compatibility
+		encoder := unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewEncoder()
+		utf16Content, _, err := transform.String(encoder, content)
+		if err != nil {
+			return fmt.Errorf("failed to encode to UTF-16: %v", err)
+		}
+		cmd := exec.Command("clip.exe")
+		cmd.Stdin = strings.NewReader(utf16Content)
+		return cmd.Run()
+	}
+	// X11 (xclip)
+	if _, err := exec.LookPath("xclip"); err == nil {
+		cmd := exec.Command("xclip", "-selection", "clipboard")
+		cmd.Stdin = strings.NewReader(content)
+		return cmd.Run()
+	}
+	// Wayland (wl-copy)
+	if _, err := exec.LookPath("wl-copy"); err == nil {
+		cmd := exec.Command("wl-copy")
+		cmd.Stdin = strings.NewReader(content)
+		return cmd.Run()
+	}
+	// macOS (pbcopy)
+	if _, err := exec.LookPath("pbcopy"); err == nil {
+		cmd := exec.Command("pbcopy")
+		cmd.Stdin = strings.NewReader(content)
+		return cmd.Run()
+	}
+	return fmt.Errorf("no clipboard tool available (tried clip.exe, xclip, wl-copy, pbcopy)")
+}
 
 // LoadConfigFromFlags constructs a Config from flag values or a YAML file
 func LoadConfigFromFlags(configFlag, directoryFlag, outputFlag, prepromptFlag, requestFlag string, tokenLimitFlag int, skipFlags []string) (Config, error) {
