@@ -3,9 +3,9 @@ name: CI
 on:
   push:
     branches:
-      - '**'  # Matches all branches (e.g., master, feature/branch)
+      - '**'
     tags:
-      - 'v*'  # Matches tags like v1.0.0
+      - 'v*'
   pull_request:
 
 jobs:
@@ -26,9 +26,13 @@ jobs:
   release:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Add this to grant write permission to repository contents
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # This fixes the shallow clone warning
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
